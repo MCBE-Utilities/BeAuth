@@ -6,14 +6,16 @@ export * from './types'
 const RealmAPI = 'https://pocket.realms.minecraft.net/'
 
 class BeAuth {
-  protected response: AuthResponse
+  protected mcbeChain: AuthResponse
+  protected defaultChain: AuthResponse
 
   /**
    * Create a BeAuth.
    * @param {AuthResponse} chain Response from a successful authentication.
    */
-  public constructor(chain: AuthResponse) {
-    this.response = chain
+  public constructor(mcbeChain: AuthResponse, defaultChain: AuthResponse) {
+    this.mcbeChain = mcbeChain
+    this.defaultChain = defaultChain
   }
 
   /**
@@ -21,7 +23,7 @@ class BeAuth {
    * @returns Xuid.
    */
   public getXuid(): string {
-    return this.response?.xuid
+    return this.defaultChain?.xuid
   }
 
   /**
@@ -29,7 +31,7 @@ class BeAuth {
    * @returns Xsts token.
    */
   public getXsts(): string {
-    return this.response?.xsts_token
+    return this.mcbeChain?.xsts_token
   }
 
   /**
@@ -37,7 +39,7 @@ class BeAuth {
    * @returns Hash.
    */
   public getHash(): string {
-    return this.response?.user_hash
+    return this.mcbeChain?.user_hash
   }
 
   /**
@@ -45,7 +47,11 @@ class BeAuth {
    * @returns Gamertag.
    */
   public getGamertag(): string {
-    return this.response?.display_claims?.gtg
+    return this.mcbeChain?.display_claims?.gtg
+  }
+
+  public getDefaultChain(): AuthResponse {
+    return this.defaultChain
   }
 }
 
@@ -59,10 +65,11 @@ function authenticate(email: string, password: string, callback: (result: BeAuth
   auth(email, password, {
     XSTSRelyingParty: RealmAPI,
   })
-  .then((res: AuthResponse) => {
-    const auth = new BeAuth(res)
+  .then(async (res: AuthResponse) => {
+    const _default = (await auth(email, password)) as AuthResponse
+    const _auth = new BeAuth(res, _default)
 
-    return callback(auth, undefined)
+    return callback(_auth, undefined)
   })
   .catch((err: any) => {
     return callback(undefined, err)
