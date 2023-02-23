@@ -6,8 +6,8 @@ export * from './types'
 const RealmAPI = 'https://pocket.realms.minecraft.net/'
 
 class BeAuth {
-  protected mcbeChain: AuthResponse
-  protected defaultChain: AuthResponse
+  protected readonly mcbeChain: AuthResponse
+  protected readonly defaultChain: AuthResponse
 
   /**
    * Create a BeAuth.
@@ -61,18 +61,30 @@ class BeAuth {
  * @param {string} password Password associated with your microsoft account.
  * @param {Callback} callback Fires when successfully or unsuccessfully authenticated. 
  */
-function authenticate(email: string, password: string, callback: (result: BeAuth | undefined, error: any | undefined) => void): void {
-  auth(email, password, {
-    XSTSRelyingParty: RealmAPI,
-  })
-  .then(async (res: AuthResponse) => {
-    const _default = (await auth(email, password)) as AuthResponse
-    const _auth = new BeAuth(res, _default)
-
-    return callback(_auth, undefined)
-  })
-  .catch((err: any) => {
-    return callback(undefined, err)
+function authenticate(email: string, password: string): Promise<BeAuth>
+function authenticate(email: string, password: string, callback: (result: BeAuth | undefined, error: any | undefined) => void): Promise<void>
+function authenticate(email: string, password: string, callback?: (result: BeAuth | undefined, error: any | undefined) => void): Promise<BeAuth | void> {
+  return new Promise((result, reject) => {
+    auth(email, password, {
+      XSTSRelyingParty: RealmAPI,
+    })
+    .then(async (res: AuthResponse) => {
+      const _default = (await auth(email, password)) as AuthResponse
+      const _auth = new BeAuth(res, _default)
+  
+      if (callback) {
+        return callback(_auth, undefined)
+      } else {
+        return result(_auth)
+      }
+    })
+    .catch((err: any) => {
+      if (callback) {
+        return callback(undefined, err)
+      } else {
+        return reject(err)
+      }
+    })
   })
 }
 
